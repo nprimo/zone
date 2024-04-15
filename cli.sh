@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 
+set -e 
+
+# TODO: make this more flexible - coming from arguments?
 RUNNER_DIR="/home/nprimo/01/runner"
+TEST_LANG_DIR="/home/nprimo/01/java-tests"
+EX_NAME="GoodbyeMars"
+EXP_FILE="GoodbyeMars.java"
+SOLUTION_DIR="/home/nprimo/01/java-tests/solutions/GoodbyeMars"
 
 start_runner() {
 	docker container rm --force runner 2>/dev/null
@@ -21,6 +28,18 @@ build_runner_image() {
 	docker system prune -f
 }
 
+build_test_image() {
+	docker build -t test-image ${TEST_LANG_DIR}
+	docker image prune -f
+}
+
+zip_solution() {
+	# TODO: check if it works for all lang
+	cp -r "$SOLUTION_DIR" "$EX_NAME"
+	zip -r data.zip . -i "$EX_NAME"/*
+    rm -rf "$EX_NAME"
+}
+
 if ! docker images | grep runner >/dev/null; then
 	echo "Building Runner image"
 	build_runner_image
@@ -31,6 +50,11 @@ if ! docker ps | grep runner >/dev/null; then
 	start_runner
 fi
 
-# build test image based on test path
-# zip solution - IMPORTANT: include only required files with the "expected" path
-# run curl command
+build_test_image
+zip_solution
+
+curl --data-binary @data.zip "http://localhost:8082/test-image?env=FILE=${EXP_FILE}a&env=EXERCISE=${EX_NAME}" |
+    jq -jr .Output
+
+# TODO: make a "clean_up" function?
+rm data.zip
