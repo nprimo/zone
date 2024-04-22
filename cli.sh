@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 
-set -e 
+set -e
 
 # TODO: make this more flexible - coming from arguments?
-RUNNER_DIR="/home/nprimo/01/runner"
-TEST_LANG_DIR="/home/nprimo/01/java-tests"
-EX_NAME="GoodbyeMars"
-EXP_FILE="GoodbyeMars.java"
-SOLUTION_DIR="/home/nprimo/01/java-tests/solutions/GoodbyeMars"
+# use a 01_DIR path and "assume" all the other (tests ...) are inside.
+# TEST_LAND_DIR, could become TEST_LANG
+
+Z01_DIR="/home/nprimo/01"
+
+RUNNER_DIR="${Z01_DIR}/runner"
+#TEST_LANG_DIR="/home/nprimo/01/java-tests"
+TEST_LANG_DIR="${Z01_DIR}/go-tests"
+
+EX_NAME="displaya"
+EXP_FILE="displaya/main.go"
+#SOLUTION_DIR="$Z01_DIR}/java-tests/solutions/GoodbyeMars"
+SOLUTION_DIR="${Z01_DIR}/piscine-go/displaya"
 
 start_runner() {
 	docker container rm --force runner 2>/dev/null
@@ -34,10 +42,13 @@ build_test_image() {
 }
 
 zip_solution() {
+	#STUDENT_DIR="$EX_NAME" # work for Java
+	STUDENT_DIR="student"
 	# TODO: check if it works for all lang
-	cp -r "$SOLUTION_DIR" "$EX_NAME"
-	zip -r data.zip . -i "$EX_NAME"/*
-    rm -rf "$EX_NAME"
+	cp -r "$SOLUTION_DIR" "$STUDENT_DIR"
+	#zip -r data.zip . -i "$STUDENT_DIR"/*
+	zip -r data.zip . -i "$STUDENT_DIR"/* -j "$STUDENT_DIR"
+	rm -rf "$STUDENT_DIR"
 }
 
 if ! docker images | grep runner >/dev/null; then
@@ -53,8 +64,12 @@ fi
 build_test_image
 zip_solution
 
-curl --data-binary @data.zip "http://localhost:8082/test-image?env=FILE=${EXP_FILE}a&env=EXERCISE=${EX_NAME}" |
-    jq -jr .Output
+url="http://localhost:8082/test-image?\
+env=FILE=${EXP_FILE}&\
+env=EXERCISE=${EX_NAME}"
+
+curl --data-binary @data.zip "$url" | jq -jr .Output
+
 
 # TODO: make a "clean_up" function?
 rm data.zip
