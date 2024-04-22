@@ -42,12 +42,13 @@ build_test_image() {
 }
 
 zip_solution() {
-	#STUDENT_DIR="$EX_NAME" # work for Java
-	STUDENT_DIR="student"
+    STUDENT_DIR="$EX_NAME" # work for Java
+	#STUDENT_DIR="student"
 	# TODO: check if it works for all lang
 	cp -r "$SOLUTION_DIR" "$STUDENT_DIR"
-	#zip -r data.zip . -i "$STUDENT_DIR"/*
-	zip -r data.zip . -i "$STUDENT_DIR"/* -j "$STUDENT_DIR"
+    zip -r data.zip . -i "$STUDENT_DIR"/*
+    # IF LANG == go
+	#zip -r data.zip . -i "$STUDENT_DIR"/* -j "$STUDENT_DIR"
 	rm -rf "$STUDENT_DIR"
 }
 
@@ -72,4 +73,4 @@ curl --data-binary @data.zip "$url" | jq -jr .Output
 
 
 # TODO: make a "clean_up" function?
-rm data.zip
+#rm data.zip
