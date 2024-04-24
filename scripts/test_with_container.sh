@@ -22,14 +22,6 @@ trap clean_up EXIT
 Z01_DIR="/home/nprimo/01"
 RUNNER_DIR="${Z01_DIR}/runner"
 
-# TODO: make these values as inputs
-TEST_LANG="java"
-EX_NAME="GoodbyeMars"
-
-# TODO: can be extrapolated from 2 inputs?
-EXP_FILE="${EX_NAME}.${TEST_LANG}" # TODO: when is this not true?
-SOLUTION_DIR="${Z01_DIR}/${TEST_LANG}-tests/solutions/${EX_NAME}"
-
 start_runner() {
 	docker container rm --force runner 2>/dev/null
 	docker run \
@@ -49,19 +41,30 @@ build_runner_image() {
 }
 
 build_test_image() {
-	local test_lang_dir="${Z01_DIR}/${1}-tests"
+	local test_lang_dir="${Z01_DIR}/$1-tests"
 	docker build -t test-image "$test_lang_dir"
 }
 
 # TODO: make it works for all lang or make alternatives for each lang
 zip_solution_java() {
-	STUDENT_DIR="$EX_NAME" # work for Java
-	cp -r "$SOLUTION_DIR" "$STUDENT_DIR"
+	local ex_name=$1
+	local solution_dir=$2
+	STUDENT_DIR="$ex_name" 
+
+	cp -r "$solution_dir" "$STUDENT_DIR"
 	zip -r data.zip . -i "$STUDENT_DIR"/*
 	rm -rf "$STUDENT_DIR"
 }
 
 main() {
+	#EX_NAME="GoodbyeMars"
+	#TEST_LANG="java"
+	local ex_name=$1
+	local test_lang=$2
+	local solution_dir="${Z01_DIR}/${test_lang}-tests/solutions/${ex_name}"
+
+	EXP_FILE="${ex_name}.${test_lang}" # TODO: when is this not true?
+
 	if ! docker images | grep runner >/dev/null; then
 		echo "Building Runner image"
 		build_runner_image
@@ -72,16 +75,13 @@ main() {
 		start_runner
 	fi
 
-	build_test_image ${TEST_LANG}
-	if [[ $# -eq 0 ]]; then
-		zip_solution_java
-	else
-		cp "$1" data.zip
-	fi
+	build_test_image "$test_lang"
+	# TODO: make a way to send solution or zip the other lang solutions
+	zip_solution_java "$ex_name" "$solution_dir"
 
 	url="http://localhost:8082/test-image?\
 env=FILE=${EXP_FILE}&\
-env=EXERCISE=${EX_NAME}"
+env=EXERCISE=${ex_name}"
 
 	echo "Sending to runner..."
 	curl -s --data-binary @data.zip "$url" | jq -jr .Output
