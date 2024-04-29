@@ -42,23 +42,12 @@ build_runner_image() {
 
 build_test_image() {
 	local test_lang_dir="${Z01_DIR}/$1-tests"
+	local test_branch=$(cd "$test_lang_dir" && git branch --show-current && cd -)
+    echo "Building test image based on branch: $test_branch"
 	docker build -t test-image "$test_lang_dir"
 }
 
-# TODO: make it works for all lang or make alternatives for each lang
-zip_solution_java() {
-	local ex_name=$1
-	local solution_dir=$2
-	STUDENT_DIR="$ex_name" 
-
-	cp -r "$solution_dir" "$STUDENT_DIR"
-	zip -r data.zip . -i "$STUDENT_DIR"/*
-	rm -rf "$STUDENT_DIR"
-}
-
 main() {
-	#EX_NAME="GoodbyeMars"
-	#TEST_LANG="java"
 	local ex_name=$1
 	local test_lang=$2
 	local solution_dir="${Z01_DIR}/${test_lang}-tests/solutions/${ex_name}"
@@ -77,7 +66,31 @@ main() {
 
 	build_test_image "$test_lang"
 	# TODO: make a way to send solution or zip the other lang solutions
-	zip_solution_java "$ex_name" "$solution_dir"
+	case "$test_lang" in
+	"go")
+		mkdir tmp
+        # TODO: this works for function solutions. Create a if statement 
+        # to see if the solution is:
+        # - solutions/<ex_name>/main.go or
+        # - solution/<ex_name>.go
+        # only the line below (1 line) needs to be changed
+		cp "$solution_dir"* tmp
+
+		cd tmp && go mod init piscine && cd ..
+		zip -r data.zip . -i tmp/* -j tmp
+		rm -rf tmp
+		;;
+	"java")
+		STUDENT_DIR="$ex_name"
+		cp -r "$solution_dir" "$STUDENT_DIR"
+		zip -r data.zip . -i "$STUDENT_DIR"/*
+		rm -rf "$STUDENT_DIR"
+		;;
+	*)
+		echo "No implementation yet for $test_lang"
+		exit 1
+		;;
+	esac
 
 	url="http://localhost:8082/test-image?\
 env=FILE=${EXP_FILE}&\
